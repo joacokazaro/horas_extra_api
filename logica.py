@@ -65,7 +65,12 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
             horas_teoricas += 4 if dia.weekday() == 5 else 8
         else:
             if servicio == "Supermercado":
-                horas_diarias = 8
+                if jornada_semanal in [40, 44]:
+                    horas_diarias = 8
+                elif jornada_semanal == 30:
+                    horas_diarias = 6
+                else:
+                    horas_diarias = 4
             elif servicio in ["Hospital", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA Diana", "Cuadrilla CA Gustavo"]:
                 if jornada_semanal in [40, 44]:
                     horas_diarias = 8
