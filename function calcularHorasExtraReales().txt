@@ -1,0 +1,160 @@
+function calcularHorasExtraReales() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaDatos = ss.getSheetByName("07.2025");  
+  const hojaNovedades = ss.getSheetByName("Novedades 07.2025");  
+  const urlDatos = "https://docs.google.com/spreadsheets/d/1LqTSUncyf2iUCSh-2aUzgJgXVD1c06JsqKXykdo6_zY/edit?gid=426088299#gid=426088299";
+  const archivoDatos = SpreadsheetApp.openByUrl(urlDatos);
+  const hojaDinamica = archivoDatos.getSheetByName("Tabla dinámica 3");
+
+  const datos07 = hojaDatos.getDataRange().getValues();
+  const datosNovedades = hojaNovedades.getDataRange().getValues();
+  const datosDinamica = hojaDinamica.getDataRange().getValues();
+
+  for (let i = 2; i < datos07.length; i++) {
+    const fila = datos07[i];
+    const legajo = fila[0];
+    const servicioOriginal = fila[9];
+    const mesTexto = fila[14];
+    const hsSolicitadas = Number(fila[13]);
+    const observaciones = fila[23];  // Columna X
+
+    if (!legajo || !servicioOriginal || !mesTexto || isNaN(hsSolicitadas)) {
+      hojaDatos.getRange(i + 1, 18).setValue("⚠️ Faltan datos");
+      continue;
+    }
+
+    // ✅ Reglas de excepciones antes de cálculos
+    if (observaciones && typeof observaciones === "string") {
+      const textoObs = observaciones.toLowerCase();
+      if (textoObs.includes("presentismo")) {
+        hojaDatos.getRange(i + 1, 18).setValue("T: 0 E: 1");
+        continue;
+      }
+      if (textoObs.includes("almuerzo")) {
+        hojaDatos.getRange(i + 1, 18).setValue("almuerzo");
+        continue;
+      }
+    }
+
+    if (servicioOriginal && typeof servicioOriginal === "string") {
+      const textoServicio = servicioOriginal.toLowerCase();
+      if (textoServicio.includes("plagas")) {
+        hojaDatos.getRange(i + 1, 18).setValue("Control de Plagas");
+        continue;
+      }
+    }
+
+    const mes = obtenerMesComoNumero(mesTexto);
+    if (mes !== 7) {  // ✅ CAMBIADO: validación del mes de JULIO
+      hojaDatos.getRange(i + 1, 18).setValue("⚠️ Solicita otro mes");
+      continue;
+    }
+
+    const filaDinamica = datosDinamica.find(f => f[0] === legajo);
+    if (!filaDinamica) {
+      hojaDatos.getRange(i + 1, 18).setValue("⚠️ Sin datos jornada");
+      continue;
+    }
+
+    const jornada = Number(filaDinamica[3]);
+    const horasTrabajadas = Number(filaDinamica[2]);
+
+    if (isNaN(jornada) || isNaN(horasTrabajadas)) {
+      hojaDatos.getRange(i + 1, 18).setValue("⚠️ Datos inválidos");
+      continue;
+    }
+
+    // ✅ Obtener ausencias del mes 7 con fechas normalizadas (julio)
+    const ausencias = [];
+    for (let j = 1; j < datosNovedades.length; j++) {
+      const nov = datosNovedades[j];
+      const legajoNov = nov[0];
+      const desde = nov[2];
+      const hasta = nov[3];
+
+      if (legajoNov === legajo && desde && hasta) {
+        const f = new Date(desde);
+        const h = new Date(hasta);
+        f.setHours(0, 0, 0, 0);
+        h.setHours(0, 0, 0, 0);
+
+        while (f.getTime() <= h.getTime()) {
+          if (f.getMonth() === 6) {  // ✅ CAMBIADO: julio = mes 6 (base 0 en JavaScript)
+            const año = f.getFullYear();
+            const mes = (f.getMonth() + 1).toString().padStart(2, '0');
+            const dia = f.getDate().toString().padStart(2, '0');
+            const fechaStr = `${año}-${mes}-${dia}`;
+            ausencias.push(fechaStr);
+          }
+          f.setDate(f.getDate() + 1);
+        }
+      }
+    }
+
+    const payload = {
+      horas_trabajadas: horasTrabajadas,
+      jornada: jornada,
+      servicio: normalizarServicio(servicioOriginal),
+      mes: mes,
+      ausencias: ausencias
+    };
+
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    try {
+      const respuesta = UrlFetchApp.fetch("https://horas-extra-api.onrender.com/calcular", options);
+      const resultado = JSON.parse(respuesta.getContentText());
+
+      let horasExtra = resultado.horas_extra;
+      const horasTeoricas = resultado.horas_teoricas;
+
+      horasExtra = Math.max(0, horasExtra);
+
+      if (horasExtra > hsSolicitadas) {
+        horasExtra = hsSolicitadas;
+      }
+
+      hojaDatos.getRange(i + 1, 18).setValue(`Teóricas: ${horasTeoricas} Extras: ${horasExtra}`);
+    } catch (error) {
+      hojaDatos.getRange(i + 1, 18).setValue("❌ Error");
+      Logger.log(error);
+    }
+  }
+}
+
+function normalizarServicio(nombre) {
+  if (!nombre) return "";
+  const n = nombre.toLowerCase();
+  if (
+    n.includes("mami") || n.includes("supermercado") || n.includes("tadicor") || n.includes("nucettelli")
+    || n.includes("ausencias cristina")
+  ) return "Supermercado";
+  if (n.includes("hospital")) return "Hospital";
+  if (
+    n.includes("me-esc") || n.includes("pulizia") || n.includes("colegio") || n.includes("nores") || n.includes("nazareth") ||
+    n.includes("espacios verdes union") || n.includes("apross") || n.includes("taller pazar") ||
+    n.includes("sta rosa 751") || n.includes("capital ariel") || n.includes("brizuela") || n.includes("deposito laboratorio")
+    || n.includes("ausencias cecilia") || n.includes("verdes rio iv")
+  ) return "Colegio";
+  if (
+    n.includes("caminos") || n.includes("futbol amateur") || n.includes("estadio alberdi") ||
+    n.includes("puerto del aguila") || n.includes("mant espacios verdes") ||
+    n.includes("vilaut") || n.includes("agustina") || n.includes("delicias")
+    || n.includes("show sport") || n.includes("altamirano")
+  ) return "Lunes a Sábado";
+
+  return nombre;
+}
+
+function obtenerMesComoNumero(mesTexto) {
+  const meses = {
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+    "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12
+  };
+  return meses[mesTexto.toLowerCase()] || null;
+}
