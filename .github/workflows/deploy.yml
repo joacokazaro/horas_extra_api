@@ -3,7 +3,7 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - main
+      - main        # cambiá si tu rama de deploy es otra
   workflow_dispatch: {}
 
 jobs:
@@ -15,72 +15,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2) Setup de Python
+      # 2) (Opcional) Set up Python sólo para chequear requirements
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3) Instalar dependencias (tu app) + EB CLI
-      - name: Install dependencies & EB CLI
+      - name: Validar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install awsebcli
 
-      # 4) Verificar que las secrets existan
-      - name: Check required secrets
+      # 3) Crear el ZIP que va a ir a Elastic Beanstalk
+      - name: Crear paquete deploy.zip
         run: |
-          missing=0
-          for var in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION EB_APPLICATION_NAME EB_ENV_NAME; do
-            if [ -z "${!var}" ]; then
-              echo "::error::Missing required secret: $var"
-              missing=1
-            else
-              echo "✔ $var OK"
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            echo "❌ Faltan secrets, abortando."
-            exit 1
-          fi
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          EB_APPLICATION_NAME: ${{ secrets.EB_APPLICATION_NAME }}
-          EB_ENV_NAME: ${{ secrets.EB_ENV_NAME }}
+          zip -r deploy.zip . \
+            -x "*.git*" "*__pycache__*" "venv/*" "*.DS_Store"
 
-      # 5) Configurar credenciales de AWS (para que la EB CLI use estas)
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # 4) Deploy a Elastic Beanstalk usando la acción beanstalk-deploy
+      - name: Deploy to AWS Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v20
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      # 6) Inicializar EB CLI en ESTE repo (equivalente a hacer 'eb init')
-      - name: EB init (non-interactive)
-        env:
-          EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          eb init "$EB_APP" \
-            --region "$AWS_REGION" \
-            --platform "Python 3.11 running on 64bit Amazon Linux 2023"
-
-      # 7) Deploy usando EB CLI
-      - name: Deploy with EB CLI
-        env:
-          EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
-          EB_ENV: ${{ secrets.EB_ENV_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          LABEL="gh-${{ github.run_number }}-${{ github.sha }}""
-          echo "Deploying $EB_APP / $EB_ENV with label $LABEL"
-
-          # Opcional: ver estado actual (si falla no corta el workflow por el '|| true')
-          eb status "$EB_ENV" || true
-
-          # Deploy real
-          eb deploy "$EB_ENV" --staged --label "$LABEL"
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ secrets.EB_APPLICATION_NAME }}   # ej: horas_extra_api
+          environment_name: ${{ secrets.EB_ENV_NAME }}           # ej: horas-kazaro-api
+          version_label: gh-${{ github.run_number }}-${{ github.sha }}
+          region: ${{ secrets.AWS_REGION }}                      # ej: us-east-1
+          deployment_package: deploy.zip
+          use_existing_version_if_available: true
