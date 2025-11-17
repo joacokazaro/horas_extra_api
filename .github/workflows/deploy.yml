@@ -59,27 +59,28 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
-      # 6) Diagnóstico rápido de la app/env de EB
-      - name: Diagnose EB app/env
+      # 6) Instalar EB CLI
+      - name: Install EB CLI
         run: |
-          echo "Aplicación: $EB_APP"
-          echo "Environment: $EB_ENV"
+          python -m pip install --upgrade pip
+          pip install awsebcli
 
-          aws elasticbeanstalk describe-environments \
-            --application-name "$EB_APP" \
-            --query 'Environments[].[EnvironmentName,Status,Health]' \
-            --output table
+      # 7) Deploy usando EB CLI
+      - name: Deploy with EB CLI
         env:
           EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
           EB_ENV: ${{ secrets.EB_ENV_NAME }}
-          AWS_PAGER: ""
-
-      # 7) Deploy usando EB CLI (con la config del repo .elasticbeanstalk/)
-      - name: Deploy to EB
-        run: |
-          eb status || echo "Nota: si falla aquí, revisá que .elasticbeanstalk/config.yml esté commiteado"
-
-          eb deploy --staged --label "gh-${{ github.run_number }}-${{ github.sha }}"
-        env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          LABEL="gh-${{ github.run_number }}-${{ github.sha }}"
+          echo "Deploying $EB_APP / $EB_ENV with label $LABEL"
+
+          # Opcional: ver estado actual
+          eb status "$EB_ENV" || true
+
+          # Deploy real
+          eb deploy "$EB_ENV" --staged --label "$LABEL"
+
+      
+
+      
