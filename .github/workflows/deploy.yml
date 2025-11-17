@@ -35,7 +35,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Diagnóstico opcional: lista environments de la app
       - name: Diagnose EB app/env
         run: |
           echo "App: $EB_APP"
@@ -45,7 +44,6 @@ jobs:
         env:
           EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
 
-      # ✅ Acción oficial: crea Application Version + despliega
       - name: Deploy with Elastic Beanstalk Action
         uses: aws-actions/elastic-beanstalk-deploy@v1
         with:
@@ -55,7 +53,7 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           deployment-package: app.zip
 
-      - name: Describe environment (status/health)
+      - name: Describe environment
         run: |
           aws elasticbeanstalk describe-environments \
             --application-name "$EB_APP" \
