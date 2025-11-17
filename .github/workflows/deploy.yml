@@ -76,6 +76,7 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           deployment-package: app.zip
 
+
       # 7) Resumen del estado del entorno después del deploy
       - name: Describe EB environment
         run: |
