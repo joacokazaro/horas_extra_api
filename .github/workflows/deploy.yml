@@ -23,13 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Empaquetamos el código de la raíz del repo
       - name: Zip artifact
         run: |
           zip -r app.zip . \
             -x "*.git*" "*__pycache__*" "*venv/*" "*.DS_Store"
 
-      # Configurar credenciales AWS (usa tus Secrets que ya cargaste)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -37,7 +35,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Deploy sin EB CLI: crea Application Version y actualiza el environment
+      # Diagnóstico opcional: lista environments de la app
+      - name: Diagnose EB app/env
+        run: |
+          echo "App: $EB_APP"
+          aws elasticbeanstalk describe-environments \
+            --application-name "$EB_APP" \
+            --query 'Environments[].EnvironmentName' --output text
+        env:
+          EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
+
+      # ✅ Acción oficial: crea Application Version + despliega
       - name: Deploy with Elastic Beanstalk Action
         uses: aws-actions/elastic-beanstalk-deploy@v1
         with:
@@ -47,11 +55,12 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           deployment-package: app.zip
 
-      # (Opcional) Mostrar detalles del environment
-      - name: Describe environment
+      - name: Describe environment (status/health)
         run: |
-          aws elasticbeanstalk describe-environments --application-name "$EB_APP" \
-            --query 'Environments[?EnvironmentName==`'"$EB_ENV"'`].[EnvironmentName,Status,Health]' --output table
+          aws elasticbeanstalk describe-environments \
+            --application-name "$EB_APP" \
+            --query 'Environments[?EnvironmentName==`'"$EB_ENV"'`].[EnvironmentName,Status,Health]' \
+            --output table
         env:
           EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
           EB_ENV: ${{ secrets.EB_ENV_NAME }}
