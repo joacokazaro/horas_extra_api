@@ -28,6 +28,7 @@ jobs:
           zip -r app.zip . \
             -x "*.git*" "*__pycache__*" "*venv/*" "*.DS_Store"
 
+      # 1) Configurar credenciales AWS (usa tus Secrets)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -35,15 +36,37 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Diagnose EB app/env
+      # 2) Comprobación básica: credenciales válidas y cuenta correcta
+      - name: Test AWS credentials (STS)
+        run: aws sts get-caller-identity
+
+      # 3) Mostrar qué aplicación y entorno se están tomando de los secrets
+      - name: Echo EB app/env from secrets
         run: |
-          echo "App: $EB_APP"
+          echo "EB_APPLICATION_NAME from secrets: $EB_APP"
+          echo "EB_ENV_NAME from secrets: $EB_ENV"
+        env:
+          EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
+          EB_ENV: ${{ secrets.EB_ENV_NAME }}
+
+      # 4) Listar aplicaciones de Elastic Beanstalk en la cuenta/región
+      - name: List EB applications
+        run: |
+          aws elasticbeanstalk describe-applications \
+            --query 'Applications[].ApplicationName' \
+            --output table
+
+      # 5) Listar environments de esa aplicación
+      - name: List EB environments for app
+        run: |
           aws elasticbeanstalk describe-environments \
             --application-name "$EB_APP" \
-            --query 'Environments[].EnvironmentName' --output text
+            --query 'Environments[].{Name:EnvironmentName,Status:Status,Health:Health}' \
+            --output table
         env:
           EB_APP: ${{ secrets.EB_APPLICATION_NAME }}
 
+      # 6) Deploy con la acción oficial de EB (sin EB CLI)
       - name: Deploy with Elastic Beanstalk Action
         uses: aws-actions/elastic-beanstalk-deploy@v1
         with:
@@ -53,7 +76,8 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           deployment-package: app.zip
 
-      - name: Describe environment
+      # 7) Resumen del estado del entorno después del deploy
+      - name: Describe EB environment
         run: |
           aws elasticbeanstalk describe-environments \
             --application-name "$EB_APP" \
