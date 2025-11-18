@@ -63,12 +63,17 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
 
     horas_teoricas = 0
     for dia in dias_laborales_efectivos:
+        # 🚨 NUEVA REGLA: Si es Domingo (weekday() == 6), NO se cuentan horas y se pasa al siguiente día
+        if dia.weekday() == 6:
+            continue 
+        
+        # El resto de tu lógica para Lunes a Sábado
         if servicio == "Lunes a Sábado" and jornada_semanal == 44:
-            horas_teoricas += 4 if dia.weekday() == 5 else 8
+            horas_teoricas += 4 if dia.weekday() == 5 else 8 # Sáb (5) suma 4h, Lun-Vie (0-4) suma 8h
         elif servicio == "Lunes a Sábado" and jornada_semanal == 36:
-            horas_teoricas += 6 if dia.weekday() == 5 else 6
+            horas_teoricas += 6 if dia.weekday() == 5 else 6 # Sáb (5) suma 6h, Lun-Vie (0-4) suma 6h
         elif servicio == "Lunes a Sábado" and jornada_semanal == 24:
-            horas_teoricas += 4 if dia.weekday() == 5 else 4
+            horas_teoricas += 4 if dia.weekday() == 5 else 4 # Sáb (5) suma 4h, Lun-Vie (0-4) suma 4h
         else:
             if servicio == "Supermercado":
                 if jornada_semanal in [40, 44]:
