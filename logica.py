@@ -28,7 +28,7 @@ def obtener_dias_laborales(servicio, año, mes):
     for dia in cal.itermonthdates(año, mes):
         if dia.month != mes:
             continue
-        if servicio in ["Supermercado", "Hospital", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA Diana", "Cuadrilla CA Gustavo"]:
+        if servicio in ["Supermercado", "Hospital", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA UNION", "Cuadrilla CA Gustavo"]:
             if dia not in FERIADOS_SUPER_2025:
                 dias_laborales.append(dia)
         elif servicio in ["Colegio", "Cuadrilla CA Dani F", "Cuadrilla EV Dani F", "Cuadrilla CA Felipe", "Cuadrilla CA Ricardo", "Puerto del águila"]:
@@ -37,7 +37,7 @@ def obtener_dias_laborales(servicio, año, mes):
         elif servicio in ["Lunes a Sábado", "Cuadrilla CA Natalia"]:
             if dia.weekday() < 6 and dia not in FERIADOS_COLES_2025:
                 dias_laborales.append(dia)
-        elif servicio in ["Cuadrilla EV Diana", "FADEA"]:
+        elif servicio in ["Cuadrilla EV Union", "FADEA"]:
             if dia.weekday() < 5 and dia not in FERIADOS_SUPER_2025:
                 dias_laborales.append(dia)
     return dias_laborales
@@ -52,7 +52,7 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
     ausencias_validas = [f for f in ausencias if f in dias_laborales]
 
     # Aplicar descuento de francos si corresponde
-    if servicio in ["Supermercado", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA Diana", "Hospital", "Cuadrilla CA Gustavo"]:
+    if servicio in ["Supermercado", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA UNION", "Hospital", "Cuadrilla CA Gustavo"]:
         if jornada_semanal == 44:
             dias_laborales = dias_laborales[:-6]
         else:
@@ -67,6 +67,8 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
             horas_teoricas += 4 if dia.weekday() == 5 else 8
         elif servicio == "Lunes a Sábado" and jornada_semanal == 36:
             horas_teoricas += 6 if dia.weekday() == 5 else 6
+        elif servicio == "Lunes a Sábado" and jornada_semanal == 24:
+            horas_teoricas += 4 if dia.weekday() == 5 else 4
         else:
             if servicio == "Supermercado":
                 if jornada_semanal in [40, 44]:
@@ -75,7 +77,7 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
                     horas_diarias = 6
                 else:
                     horas_diarias = 4
-            elif servicio in ["Hospital", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA Diana", "Cuadrilla CA Gustavo"]:
+            elif servicio in ["Hospital", "Cuadrilla CA Cristina", "Predio Nuccetelli", "Cuadrilla CA UNION", "Cuadrilla CA Gustavo"]:
                 if jornada_semanal in [40, 44]:
                     horas_diarias = 8
                 elif jornada_semanal == 30:
