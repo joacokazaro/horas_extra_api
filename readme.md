@@ -24,12 +24,6 @@ El servicio está pensado para ser consumido desde **Google Apps Script** integr
 
 ## Arquitectura
 
-```mermaid
-flowchart TD
-    A[Google Sheets\n(Apps Script)] -->|POST /calcular| B[API Horas Extra\nFlask + Gunicorn]
-    B --> C[AWS Elastic Beanstalk\nAmazon Linux 2023\nNginx reverse proxy]
-    C --> D[GitHub Actions CI/CD\nBuild & Deploy]
-
 
 # 🚀 Endpoint Principal
 
