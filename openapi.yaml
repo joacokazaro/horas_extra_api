@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: API Calculadora de Horas Extra - Kazaró
+  version: 1.0.0
+  description: |
+    API que calcula horas teóricas y horas extra según jornada, mes, servicio y ausencias.
+
+servers:
+  - url: https://horas-kazaro-api.eba-47c8cvfy.us-east-1.elasticbeanstalk.com
+    description: Servidor de producción
+
+paths:
+  /calcular:
+    post:
+      summary: Calcula horas teóricas y horas extra
+      description: Devuelve las horas extra reales para un empleado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                horas_trabajadas:
+                  type: number
+                  example: 200
+                jornada:
+                  type: integer
+                  description: Jornada semanal del empleado
+                  example: 44
+                mes:
+                  type: integer
+                  description: Mes numérico (1-12)
+                  example: 11
+                servicio:
+                  type: string
+                  description: Tipo de servicio (Supermercado, Colegio, etc.)
+                  example: "Supermercado"
+                ausencias:
+                  type: array
+                  description: Lista de fechas de ausencias
+                  items:
+                    type: string
+                    format: date
+                  example: ["2025-11-03", "2025-11-04"]
+              required:
+                - horas_trabajadas
+                - jornada
+                - mes
+                - servicio
+      responses:
+        "200":
+          description: Resultado del cálculo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  horas_teoricas:
+                    type: number
+                    example: 176
+                  horas_extra:
+                    type: number
+                    example: 24
+        "400":
+          description: Error en la solicitud
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Formato inválido"
