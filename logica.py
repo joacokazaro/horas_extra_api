@@ -44,7 +44,26 @@ def obtener_dias_laborales(servicio, año, mes):
 
 def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausencias, año=2025):
     # Asegurarse que las ausencias estén en formato date
-    ausencias = [f if isinstance(f, date) else datetime.strptime(f, "%Y-%m-%d").date() for f in ausencias]
+    def parse_fecha(f):
+        if isinstance(f, date):
+            return f
+
+        s = str(f).strip()
+
+        # Aceptar múltiples formatos
+        formatos = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]
+
+        for fmt in formatos:
+            try:
+                return datetime.strptime(s, fmt).date()
+            except:
+                pass
+
+        return None  # Si no matchea ningún formato
+
+    # Reemplaza la línea original por esta:
+    ausencias = [dt for dt in (parse_fecha(f) for f in ausencias) if dt]
+
 
     dias_laborales = obtener_dias_laborales(servicio, año, mes)
 
