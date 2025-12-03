@@ -37,7 +37,7 @@ def obtener_dias_laborales(servicio, año, mes):
                 dias.append(dia)
 
         elif servicio == "Hospital":
-            if dia.weekday() < 6 and dia not in FERIADOS_SUPER_2025:  # Lun-Sáb
+            if dia not in FERIADOS_COLES_2025:
                 dias.append(dia)
 
         elif servicio == "Colegio":
