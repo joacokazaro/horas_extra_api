@@ -97,7 +97,7 @@ def calcular_horas_extra(horas_trabajadas, jornada_semanal, mes, servicio, ausen
     # 2️⃣ Restar francos según servicio y jornada semanal
     dias_post_francos = dias_post_ausencias.copy()
 
-    if servicio == "Supermercado":
+    if servicio == "Supermercado" or "Hospital":
         if jornada_semanal == 44:
             dias_post_francos = dias_post_francos[:-6]
             print("Se descontaron 6 francos (Jornada 44)")
